@@ -1,60 +1,160 @@
-/*
-const loginForm = document.getElementById("login-form");
-const loginInput = loginForm.querySelector("input");
-const loginButton = loginForm.querySelector("button");
-*/
+const canvas = document.getElementById("jsCanvas");
+const ctx = canvas.getContext("2d");
+const colors = document.querySelectorAll(".jsColor");
+const range = document.getElementById("jsRange");
+const mode = document.getElementById("jsMode");
+const saveBtn = document.getElementById("jsSave");
+const rectangle = document.getElementById("jsRec");
 
-//form태그 사용x
-/*
-const loginInput = document.querySelector("#login-form input");
-const loginButton = document.querySelector("#login-form button");
+const INITIAL_COLOR = "#2c2c2c";
+const CANVAS_SIZE = 700;
 
-function onLoginBtnClick() {
-    //console.dir(loginInput); 콘솔 창에서 사용자의 입력 값을 가지고 있는 항목?이 value임을 알 수 있음.
-    const userName = loginInput.value;
+canvas.width = CANVAS_SIZE;
+canvas.height = CANVAS_SIZE;
 
-    if (userName === "") {
-        alert("Please write your name");
-    } else if (userName.length > 15) {
-        alert("Your name is too long.");
+ctx.fillStyle = "white";
+ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+ctx.strokeStyle = INITIAL_COLOR;
+ctx.fillStyle = INITIAL_COLOR;
+ctx.lineWidth = 2.5;
+
+let painting = false;
+let filling = false;
+
+function stopPainting() {
+    painting = false;
+}
+
+function startPainting() {
+    if (filling === false) {
+        painting = true;
     }
 }
 
-loginButton.addEventListener("click", onLoginBtnClick);
-*/
-
-
-
-//form태그 사용 (4.2) + 4.3 + saving
-const loginForm = document.querySelector("#login-form");
-const loginInput = document.querySelector("#login-form input");
-const greeting = document.querySelector("#greeting");
-
-const HIDDEN_CLASSNAME = "hidden";
-const USERNAME_KEY = "username"; //같은 string이 반복될 때 실수 방지 위해 const 변수에 저장.
-
-//이 function이 하나의 argument를 받도록 하고 그걸 JS에 넘겨줌.
-//그 argument에는 발생한 일에 대해 우리가 필요로 할만한 정보가 담겨 있음.
-//우리는 그 argument만 매개변수로 명시해주면 됨. 그럼 그 정보들을 사용할 수 있음.
-function onLoginSubmit(event) {
-    event.preventDefault(); //브라우저의 기본 동작(여기선 페이지 새로고침)이 실행되지 않게 함.
-    loginForm.classList.add(HIDDEN_CLASSNAME);
-    const typedUsername = loginInput.value;
-    localStorage.setItem(USERNAME_KEY, typedUsername); //localStage에 key: value 형태로 저장.
-    paintGreetings(typedUsername);
+function onMouseMove(event) {
+    const x = event.offsetX;
+    const y = event.offsetY;
+    if (!painting) {
+        console.log("creating path in ", x, y);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    } else {
+        console.log("creating line in ", x, y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    }
 }
 
-function paintGreetings(username) {
-    greeting.innerText = `Hello ${username}`;
-    greeting.classList.remove(HIDDEN_CLASSNAME);
+function handleColorClick(event) {
+    const color = event.target.style.backgroundColor;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+}
+
+function handleRangeChange(event) {
+    const size = event.target.value;
+    ctx.lineWidth = size;
+}
+
+function handleModeClick() {
+    if(filling === true) {
+        filling = false;
+        mode.innerText = "FILL";
+    } else {
+        filling = true;
+        mode.innerText = "PAINT";
+    }
+}
+
+function handleCanvasClick() {
+    if (filling) {
+        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    }
+}
+
+function handleCM(event) {
+    event.preventDefault();
+}
+
+function handleSaveClick() {
+    const image = canvas.toDataURL();
+    const link = document.createElement("a");
+    link.href = image;
+    link.download = "PaintJS[EXPORT]";
+    link.click();
+}
+
+function drawRectangle() {
+    const inputWidth = prompt('사각형의 가로 길이를 입력하세요');
+    const inputHeight = prompt('사각형의 세로 길이를 입력하세요');
+    ctx.fillRect(50, 50, inputWidth, inputHeight);
+}
+
+if (canvas) {
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mousedown", startPainting);
+    canvas.addEventListener("mouseup", stopPainting);
+    canvas.addEventListener("mouseleave", stopPainting);
+    canvas.addEventListener("click", handleCanvasClick);
+    canvas.addEventListener("contextmenu", handleCM);
+}
+
+Array.from(colors).forEach(color => color.addEventListener("click", handleColorClick));
+
+if (range) {
+    range.addEventListener("input", handleRangeChange);
+}
+
+if (mode) {
+    mode.addEventListener("click", handleModeClick);
+}
+
+if (saveBtn) {
+    saveBtn.addEventListener("click", handleSaveClick);
+}
+
+if (rectangle) {
+    rectangle.addEventListener("click", drawRectangle);
+}
+
+const answerForm = document.querySelector("#answer-form");
+const answerInput = document.querySelector("#answer-form input");
+
+const ANSWER_KEY = "answer";
+
+const savedAnswer = localStorage.getItem(ANSWER_KEY);
+
+function checkAnswer(event) {
+    event.preventDefault();
+    console.log(answerInput.value);
+    if (answerInput.value === localStorage.getItem(ANSWER_KEY)) {
+        alert("정답입니다!");
+        localStorage.removeItem(ANSWER_KEY);
+        //window.location.reload();
+        answerInput.placeholder = "출제자는 정답 입력!";
+        answerInput.value = null;
+    } else {
+        answerInput.value = null;
+        alert("틀렸어요ㅜ 다시 시도해주세요");
+        
+    }
+}
+
+function onAnswerSubmit(event) {
+    event.preventDefault();
+    const typedAnswer = answerInput.value;
+    answerInput.value = null;
+    answerInput.placeholder = "정답이 무엇일까요?";
+    localStorage.setItem(ANSWER_KEY, typedAnswer);
+    answerForm.removeEventListener("submit", onAnswerSubmit);
+    answerForm.addEventListener("submit", checkAnswer);
 }
 
 
-const savedUsername = localStorage.getItem(USERNAME_KEY);
-
-if (savedUsername === null) {
-    loginForm.classList.remove(HIDDEN_CLASSNAME);
-    loginForm.addEventListener("submit", onLoginSubmit);
+if (savedAnswer === null) {
+    answerInput.placeholder = "출제자는 정답 입력!";
+    answerForm.addEventListener("submit", onAnswerSubmit);
 } else {
-    paintGreetings(savedUsername);
+    answerInput.placeholder = "정답이 무엇일까요?";
+    answerForm.addEventListener("submit", checkAnswer);
 }
